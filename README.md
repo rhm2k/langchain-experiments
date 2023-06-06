@@ -61,6 +61,9 @@ conda activate langchain-env
 pip install -r requirements.txt
 ```
 
+RHM Note 2023-06-05:
+Added ipykernel to the requirements.txt file, since apparently the conda base env did not include it when I created langchain-env conda environment.
+
 #### 4. Set up the keys in a .env file
 
 First, create a `.env` file in the root directory of the project. Inside the file, add your OpenAI API key:
