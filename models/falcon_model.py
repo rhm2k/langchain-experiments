@@ -24,7 +24,6 @@ falcon_llm = HuggingFaceHub(
     repo_id=repo_id, model_kwargs={"temperature": 0.1, "max_new_tokens": 500}
 )
 
-
 # --------------------------------------------------------------
 # Create a PromptTemplate and LLMChain
 # --------------------------------------------------------------
