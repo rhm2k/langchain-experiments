@@ -2,7 +2,18 @@
  * Types
  */
 
-export type NodeParamsType = 'options' | 'string' | 'number' | 'boolean' | 'password' | 'json' | 'code' | 'date' | 'file' | 'folder'
+export type NodeParamsType =
+    | 'asyncOptions'
+    | 'options'
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'password'
+    | 'json'
+    | 'code'
+    | 'date'
+    | 'file'
+    | 'folder'
 
 export type CommonType = string | number | boolean | undefined | null
 
@@ -14,6 +25,10 @@ export type MessageType = 'apiMessage' | 'userMessage'
 
 export interface ICommonObject {
     [key: string]: any | CommonType | ICommonObject | CommonType[] | ICommonObject[]
+}
+
+export type IDatabaseEntity = {
+    [key: string]: any
 }
 
 export interface IAttachment {
@@ -50,6 +65,7 @@ export interface INodeParams {
     placeholder?: string
     fileType?: string
     additionalParams?: boolean
+    loadMethod?: string
 }
 
 export interface INodeExecutionData {
@@ -74,8 +90,11 @@ export interface INodeProperties {
 export interface INode extends INodeProperties {
     inputs?: INodeParams[]
     output?: INodeOutputsValue[]
+    loadMethods?: {
+        [key: string]: (nodeData: INodeData, options?: ICommonObject) => Promise<INodeOptionsValue[]>
+    }
     init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
-    run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string>
+    run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
 }
 
 export interface INodeData extends INodeProperties {
@@ -83,6 +102,7 @@ export interface INodeData extends INodeProperties {
     inputs?: ICommonObject
     outputs?: ICommonObject
     instance?: any
+    loadMethod?: string // method to load async options
 }
 
 export interface IMessage {
@@ -95,11 +115,51 @@ export interface IMessage {
  */
 
 import { PromptTemplate as LangchainPromptTemplate, PromptTemplateInput } from 'langchain/prompts'
+import { VectorStore } from 'langchain/vectorstores/base'
 
 export class PromptTemplate extends LangchainPromptTemplate {
     promptValues: ICommonObject
 
     constructor(input: PromptTemplateInput) {
         super(input)
+    }
+}
+
+export interface PromptRetrieverInput {
+    name: string
+    description: string
+    systemMessage: string
+}
+
+const fixedTemplate = `Here is a question:
+{input}
+`
+export class PromptRetriever {
+    name: string
+    description: string
+    systemMessage: string
+
+    constructor(fields: PromptRetrieverInput) {
+        this.name = fields.name
+        this.description = fields.description
+        this.systemMessage = `${fields.systemMessage}\n${fixedTemplate}`
+    }
+}
+
+export interface VectorStoreRetrieverInput {
+    name: string
+    description: string
+    vectorStore: VectorStore
+}
+
+export class VectorStoreRetriever {
+    name: string
+    description: string
+    vectorStore: VectorStore
+
+    constructor(fields: VectorStoreRetrieverInput) {
+        this.name = fields.name
+        this.description = fields.description
+        this.vectorStore = fields.vectorStore
     }
 }

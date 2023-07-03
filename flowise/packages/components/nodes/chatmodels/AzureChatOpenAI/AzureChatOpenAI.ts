@@ -43,6 +43,10 @@ class AzureChatOpenAI_ChatModels implements INode {
                     {
                         label: 'gpt-35-turbo',
                         name: 'gpt-35-turbo'
+                    },
+                    {
+                        label: 'gpt-35-turbo-16k',
+                        name: 'gpt-35-turbo-16k'
                     }
                 ],
                 default: 'gpt-35-turbo',
@@ -70,14 +74,10 @@ class AzureChatOpenAI_ChatModels implements INode {
             {
                 label: 'Azure OpenAI Api Version',
                 name: 'azureOpenAIApiVersion',
-                type: 'options',
-                options: [
-                    {
-                        label: '2023-03-15-preview',
-                        name: '2023-03-15-preview'
-                    }
-                ],
-                default: '2023-03-15-preview'
+                type: 'string',
+                placeholder: '2023-06-01-preview',
+                description:
+                    'Description of Supported API Versions. Please refer <a target="_blank" href="https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#chat-completions">examples</a>'
             },
             {
                 label: 'Max Tokens',
@@ -121,14 +121,16 @@ class AzureChatOpenAI_ChatModels implements INode {
         const frequencyPenalty = nodeData.inputs?.frequencyPenalty as string
         const presencePenalty = nodeData.inputs?.presencePenalty as string
         const timeout = nodeData.inputs?.timeout as string
+        const streaming = nodeData.inputs?.streaming as boolean
 
         const obj: Partial<AzureOpenAIInput> & Partial<OpenAIBaseInput> = {
-            temperature: parseInt(temperature, 10),
+            temperature: parseFloat(temperature),
             modelName,
             azureOpenAIApiKey,
             azureOpenAIApiInstanceName,
             azureOpenAIApiDeploymentName,
-            azureOpenAIApiVersion
+            azureOpenAIApiVersion,
+            streaming: streaming ?? true
         }
 
         if (maxTokens) obj.maxTokens = parseInt(maxTokens, 10)

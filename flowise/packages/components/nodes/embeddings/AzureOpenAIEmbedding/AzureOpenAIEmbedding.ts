@@ -42,18 +42,18 @@ class AzureOpenAIEmbedding_Embeddings implements INode {
             {
                 label: 'Azure OpenAI Api Version',
                 name: 'azureOpenAIApiVersion',
-                type: 'options',
-                options: [
-                    {
-                        label: '2023-03-15-preview',
-                        name: '2023-03-15-preview'
-                    },
-                    {
-                        label: '2022-12-01',
-                        name: '2022-12-01'
-                    }
-                ],
-                default: '2023-03-15-preview'
+                type: 'string',
+                placeholder: '2023-03-15-preview',
+                description:
+                    'Description of Supported API Versions. Please refer <a target="_blank" href="https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#embeddings">examples</a>'
+            },
+            {
+                label: 'Batch Size',
+                name: 'batchSize',
+                type: 'number',
+                default: '1',
+                optional: true,
+                additionalParams: true
             },
             {
                 label: 'Timeout',
@@ -70,6 +70,7 @@ class AzureOpenAIEmbedding_Embeddings implements INode {
         const azureOpenAIApiInstanceName = nodeData.inputs?.azureOpenAIApiInstanceName as string
         const azureOpenAIApiDeploymentName = nodeData.inputs?.azureOpenAIApiDeploymentName as string
         const azureOpenAIApiVersion = nodeData.inputs?.azureOpenAIApiVersion as string
+        const batchSize = nodeData.inputs?.batchSize as string
         const timeout = nodeData.inputs?.timeout as string
 
         const obj: Partial<OpenAIEmbeddingsParams> & Partial<AzureOpenAIInput> = {
@@ -79,6 +80,7 @@ class AzureOpenAIEmbedding_Embeddings implements INode {
             azureOpenAIApiVersion
         }
 
+        if (batchSize) obj.batchSize = parseInt(batchSize, 10)
         if (timeout) obj.timeout = parseInt(timeout, 10)
 
         const model = new OpenAIEmbeddings(obj)

@@ -2,6 +2,9 @@ import axios from 'axios'
 import { load } from 'cheerio'
 import * as fs from 'fs'
 import * as path from 'path'
+import { BaseCallbackHandler } from 'langchain/callbacks'
+import { Server } from 'socket.io'
+import { ChainValues } from 'langchain/dist/schema'
 
 export const numberOrExpressionRegex = '^(\\d+\\.?\\d*|{{.*}})$' //return true if string consists only numbers OR expression {{}}
 export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is not empty or blank
@@ -15,6 +18,7 @@ export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is no
  */
 export const getBaseClasses = (targetClass: any) => {
     const baseClasses: string[] = []
+    const skipClassNames = ['BaseLangChain', 'Serializable']
 
     if (targetClass instanceof Function) {
         let baseClass = targetClass
@@ -23,7 +27,7 @@ export const getBaseClasses = (targetClass: any) => {
             const newBaseClass = Object.getPrototypeOf(baseClass)
             if (newBaseClass && newBaseClass !== Object && newBaseClass.name) {
                 baseClass = newBaseClass
-                baseClasses.push(baseClass.name)
+                if (!skipClassNames.includes(baseClass.name)) baseClasses.push(baseClass.name)
             } else {
                 break
             }
@@ -129,7 +133,7 @@ export const getInputVariables = (paramValue: string): string[] => {
     const variableStack = []
     const inputVariables = []
     let startIdx = 0
-    const endIdx = returnVal.length - 1
+    const endIdx = returnVal.length
 
     while (startIdx < endIdx) {
         const substr = returnVal.substring(startIdx, startIdx + 1)
@@ -152,6 +156,12 @@ export const getInputVariables = (paramValue: string): string[] => {
     return inputVariables
 }
 
+/**
+ * Crawl all available urls given a domain url and limit
+ * @param {string} url
+ * @param {number} limit
+ * @returns {string[]}
+ */
 export const getAvailableURLs = async (url: string, limit: number) => {
     try {
         const availableUrls: string[] = []
@@ -190,3 +200,75 @@ export const getAvailableURLs = async (url: string, limit: number) => {
         throw new Error(`getAvailableURLs: ${err?.message}`)
     }
 }
+
+/**
+ * Custom chain handler class
+ */
+export class CustomChainHandler extends BaseCallbackHandler {
+    name = 'custom_chain_handler'
+    isLLMStarted = false
+    socketIO: Server
+    socketIOClientId = ''
+    skipK = 0 // Skip streaming for first K numbers of handleLLMStart
+    returnSourceDocuments = false
+
+    constructor(socketIO: Server, socketIOClientId: string, skipK?: number, returnSourceDocuments?: boolean) {
+        super()
+        this.socketIO = socketIO
+        this.socketIOClientId = socketIOClientId
+        this.skipK = skipK ?? this.skipK
+        this.returnSourceDocuments = returnSourceDocuments ?? this.returnSourceDocuments
+    }
+
+    handleLLMStart() {
+        if (this.skipK > 0) this.skipK -= 1
+    }
+
+    handleLLMNewToken(token: string) {
+        if (this.skipK === 0) {
+            if (!this.isLLMStarted) {
+                this.isLLMStarted = true
+                this.socketIO.to(this.socketIOClientId).emit('start', token)
+            }
+            this.socketIO.to(this.socketIOClientId).emit('token', token)
+        }
+    }
+
+    handleLLMEnd() {
+        this.socketIO.to(this.socketIOClientId).emit('end')
+    }
+
+    handleChainEnd(outputs: ChainValues): void | Promise<void> {
+        if (this.returnSourceDocuments) {
+            this.socketIO.to(this.socketIOClientId).emit('sourceDocuments', outputs?.sourceDocuments)
+        }
+    }
+}
+
+export const availableDependencies = [
+    '@dqbd/tiktoken',
+    '@getzep/zep-js',
+    '@huggingface/inference',
+    '@pinecone-database/pinecone',
+    '@supabase/supabase-js',
+    'axios',
+    'cheerio',
+    'chromadb',
+    'cohere-ai',
+    'd3-dsv',
+    'form-data',
+    'graphql',
+    'html-to-text',
+    'langchain',
+    'linkifyjs',
+    'mammoth',
+    'moment',
+    'node-fetch',
+    'pdf-parse',
+    'pdfjs-dist',
+    'playwright',
+    'puppeteer',
+    'srt-parser-2',
+    'typeorm',
+    'weaviate-ts-client'
+]
