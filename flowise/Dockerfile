@@ -1,14 +1,19 @@
 # Build local monorepo image
 # docker build --no-cache -t  flowise .
+
 # Run image
 # docker run -d -p 3000:3000 flowise
+
 FROM node:18-alpine
+RUN apk add --update libc6-compat python3 make g++
+# needed for pdfjs-dist
+RUN apk add --no-cache build-base cairo-dev pango-dev
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /usr/src/packages
 
 # Copy root package.json and lockfile
-COPY package.json ./
-COPY yarn.lock ./
+COPY package.json yarn.loc[k] ./
 
 # Copy components package.json
 COPY packages/components/package.json ./packages/components/package.json

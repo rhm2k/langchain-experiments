@@ -117,11 +117,13 @@ class ChatAnthropic_ChatModels implements INode {
         const maxTokensToSample = nodeData.inputs?.maxTokensToSample as string
         const topP = nodeData.inputs?.topP as string
         const topK = nodeData.inputs?.topK as string
+        const streaming = nodeData.inputs?.streaming as boolean
 
         const obj: Partial<AnthropicInput> & { anthropicApiKey?: string } = {
-            temperature: parseInt(temperature, 10),
+            temperature: parseFloat(temperature),
             modelName,
-            anthropicApiKey
+            anthropicApiKey,
+            streaming: streaming ?? true
         }
 
         if (maxTokensToSample) obj.maxTokensToSample = parseInt(maxTokensToSample, 10)

@@ -14,11 +14,16 @@ import {
     INodeData,
     IOverrideConfig
 } from '../Interface'
-import { cloneDeep, get } from 'lodash'
-import { ICommonObject, getInputVariables } from 'flowise-components'
+import { cloneDeep, get, omit, merge } from 'lodash'
+import { ICommonObject, getInputVariables, IDatabaseEntity } from 'flowise-components'
 import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
+import { ChatFlow } from '../entity/ChatFlow'
+import { ChatMessage } from '../entity/ChatMessage'
+import { Tool } from '../entity/Tool'
+import { DataSource } from 'typeorm'
 
 const QUESTION_VAR_PREFIX = 'question'
+export const databaseEntities: IDatabaseEntity = { ChatFlow: ChatFlow, ChatMessage: ChatMessage, Tool: Tool }
 
 /**
  * Returns the home folder path of the user if
@@ -182,6 +187,8 @@ export const buildLangchain = async (
     depthQueue: IDepthQueue,
     componentNodes: IComponentNodes,
     question: string,
+    chatId: string,
+    appDataSource: DataSource,
     overrideConfig?: ICommonObject
 ) => {
     const flowNodes = cloneDeep(reactFlowNodes)
@@ -214,7 +221,11 @@ export const buildLangchain = async (
             if (overrideConfig) flowNodeData = replaceInputsWithConfig(flowNodeData, overrideConfig)
             const reactFlowNodeData: INodeData = resolveVariables(flowNodeData, flowNodes, question)
 
-            flowNodes[nodeIndex].data.instance = await newNodeInstance.init(reactFlowNodeData, question)
+            flowNodes[nodeIndex].data.instance = await newNodeInstance.init(reactFlowNodeData, question, {
+                chatId,
+                appDataSource,
+                databaseEntities
+            })
         } catch (e: any) {
             console.error(e)
             throw new Error(e)
@@ -318,6 +329,25 @@ export const getVariableValue = (paramValue: string, reactFlowNodes: IReactFlowN
 }
 
 /**
+ * Temporarily disable streaming if vectorStore is Faiss
+ * @param {INodeData} flowNodeData
+ * @returns {boolean}
+ */
+export const isVectorStoreFaiss = (flowNodeData: INodeData) => {
+    if (flowNodeData.inputs && flowNodeData.inputs.vectorStoreRetriever) {
+        const vectorStoreRetriever = flowNodeData.inputs.vectorStoreRetriever
+        if (typeof vectorStoreRetriever === 'string' && vectorStoreRetriever.includes('faiss')) return true
+        if (
+            typeof vectorStoreRetriever === 'object' &&
+            vectorStoreRetriever.vectorStore &&
+            vectorStoreRetriever.vectorStore.constructor.name === 'FaissStore'
+        )
+            return true
+    }
+    return false
+}
+
+/**
  * Loop through each inputs and resolve variable if neccessary
  * @param {INodeData} reactFlowNodeData
  * @param {IReactFlowNode[]} reactFlowNodes
@@ -325,7 +355,12 @@ export const getVariableValue = (paramValue: string, reactFlowNodes: IReactFlowN
  * @returns {INodeData}
  */
 export const resolveVariables = (reactFlowNodeData: INodeData, reactFlowNodes: IReactFlowNode[], question: string): INodeData => {
-    const flowNodeData = cloneDeep(reactFlowNodeData)
+    let flowNodeData = cloneDeep(reactFlowNodeData)
+    if (reactFlowNodeData.instance && isVectorStoreFaiss(reactFlowNodeData)) {
+        // omit and merge because cloneDeep of instance gives "Illegal invocation" Exception
+        const flowNodeDataWithoutInstance = cloneDeep(omit(reactFlowNodeData, ['instance']))
+        flowNodeData = merge(flowNodeDataWithoutInstance, { instance: reactFlowNodeData.instance })
+    }
     const types = 'inputs'
 
     const getParamValues = (paramsObj: ICommonObject) => {
@@ -428,7 +463,7 @@ export const isSameOverrideConfig = (
  * @returns {string}
  */
 export const getAPIKeyPath = (): string => {
-    return path.join(__dirname, '..', '..', 'api.json')
+    return process.env.APIKEY_PATH ? path.join(process.env.APIKEY_PATH, 'api.json') : path.join(__dirname, '..', '..', 'api.json')
 }
 
 /**
@@ -510,6 +545,18 @@ export const addAPIKey = async (keyName: string): Promise<ICommonObject[]> => {
     ]
     await fs.promises.writeFile(getAPIKeyPath(), JSON.stringify(content), 'utf8')
     return content
+}
+
+/**
+ * Get API Key details
+ * @param {string} apiKey
+ * @returns {Promise<ICommonObject[]>}
+ */
+export const getApiKey = async (apiKey: string) => {
+    const existingAPIKeys = await getAPIKeys()
+    const keyIndex = existingAPIKeys.findIndex((key) => key.apiKey === apiKey)
+    if (keyIndex < 0) return undefined
+    return existingAPIKeys[keyIndex]
 }
 
 /**
@@ -609,4 +656,34 @@ export const findAvailableConfigs = (reactFlowNodes: IReactFlowNode[]) => {
     }
 
     return configs
+}
+
+/**
+ * Check to see if flow valid for stream
+ * @param {IReactFlowNode[]} reactFlowNodes
+ * @param {INodeData} endingNodeData
+ * @returns {boolean}
+ */
+export const isFlowValidForStream = (reactFlowNodes: IReactFlowNode[], endingNodeData: INodeData) => {
+    const streamAvailableLLMs = {
+        'Chat Models': ['azureChatOpenAI', 'chatOpenAI', 'chatAnthropic'],
+        LLMs: ['azureOpenAI', 'openAI']
+    }
+
+    let isChatOrLLMsExist = false
+    for (const flowNode of reactFlowNodes) {
+        const data = flowNode.data
+        if (data.category === 'Chat Models' || data.category === 'LLMs') {
+            isChatOrLLMsExist = true
+            const validLLMs = streamAvailableLLMs[data.category]
+            if (!validLLMs.includes(data.name)) return false
+        }
+    }
+
+    return (
+        isChatOrLLMsExist &&
+        (endingNodeData.category === 'Chains' || endingNodeData.name === 'openAIFunctionAgent') &&
+        !isVectorStoreFaiss(endingNodeData) &&
+        process.env.EXECUTION_MODE !== 'child'
+    )
 }

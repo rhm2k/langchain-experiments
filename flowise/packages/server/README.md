@@ -1,10 +1,10 @@
 <!-- markdownlint-disable MD030 -->
 
-# Flowise - LangchainJS UI
+# Flowise - Low-Code LLM apps builder
 
 ![Flowise](https://github.com/FlowiseAI/Flowise/blob/main/images/flowise.gif?raw=true)
 
-Drag & drop UI to build your customized LLM flow using [LangchainJS](https://github.com/hwchase17/langchainjs)
+Drag & drop UI to build your customized LLM flow
 
 ## ⚡Quick Start
 
@@ -22,22 +22,40 @@ Drag & drop UI to build your customized LLM flow using [LangchainJS](https://git
 
 ## 🔒 Authentication
 
-To enable app level authentication, add `USERNAME` and `PASSWORD` to the `.env` file:
+To enable app level authentication, add `FLOWISE_USERNAME` and `FLOWISE_PASSWORD` to the `.env` file:
 
 ```
-USERNAME=user
-PASSWORD=1234
+FLOWISE_USERNAME=user
+FLOWISE_PASSWORD=1234
 ```
+
+## 🔎 Debugging
+
+You can set `DEBUG=true` to the `.env` file. Refer [here](https://docs.flowiseai.com/environment-variables) for full list of env variables
 
 ## 📖 Documentation
 
-Coming Soon
-
-## 💻 Cloud Hosted
-
-Coming Soon
+[Flowise Docs](https://docs.flowiseai.com/)
 
 ## 🌐 Self Host
+
+### [Railway](https://docs.flowiseai.com/deployment/railway)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/YK7J0v)
+
+### [Render](https://docs.flowiseai.com/deployment/render)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://docs.flowiseai.com/deployment/render)
+
+### [AWS](https://docs.flowiseai.com/deployment/aws)
+
+### [Azure](https://docs.flowiseai.com/deployment/azure)
+
+### [DigitalOcean](https://docs.flowiseai.com/deployment/digital-ocean)
+
+### [GCP](https://docs.flowiseai.com/deployment/gcp)
+
+## 💻 Cloud Hosted
 
 Coming Soon
 

@@ -9,10 +9,11 @@ export interface IChatFlow {
     id: string
     name: string
     flowData: string
-    apikeyid: string
-    deployed: boolean
+    isPublic: boolean
     updatedDate: Date
     createdDate: Date
+    apikeyid?: string
+    chatbotConfig?: string
 }
 
 export interface IChatMessage {
@@ -20,6 +21,18 @@ export interface IChatMessage {
     role: MessageType
     content: string
     chatflowid: string
+    createdDate: Date
+    sourceDocuments?: string
+}
+
+export interface ITool {
+    id: string
+    name: string
+    description: string
+    color: string
+    schema?: string
+    func?: string
+    updatedDate: Date
     createdDate: Date
 }
 
@@ -115,6 +128,7 @@ export interface IncomingInput {
     question: string
     history: IMessage[]
     overrideConfig?: ICommonObject
+    socketIOClientId?: string
 }
 
 export interface IActiveChatflows {
@@ -141,6 +155,7 @@ export interface IDatabaseExport {
 
 export interface IRunChatflowMessageValue {
     chatflow: IChatFlow
+    chatId: string
     incomingInput: IncomingInput
     componentNodes: IComponentNodes
     endingNodeData?: INodeData
